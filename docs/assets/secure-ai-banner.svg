@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360" role="img" aria-labelledby="title description">
+  <title id="title">Secure AI</title>
+  <desc id="description">A security-first Google ADK agent with a Respan red-team score of 95.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#07111f"/>
+      <stop offset="0.55" stop-color="#0d1b2f"/>
+      <stop offset="1" stop-color="#10263c"/>
+    </linearGradient>
+    <linearGradient id="shield" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6ee7f9"/>
+      <stop offset="1" stop-color="#4f7cff"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="360" rx="28" fill="url(#background)"/>
+  <circle cx="1090" cy="55" r="170" fill="#3562ff" opacity="0.08"/>
+  <circle cx="1100" cy="325" r="225" fill="#31d7c7" opacity="0.06"/>
+
+  <g stroke="#6ee7f9" stroke-width="2" opacity="0.28">
+    <path d="M48 72h95l54 54h92" fill="none"/>
+    <path d="M55 288h115l44-44h84" fill="none"/>
+    <path d="M940 80h76l40 40h94" fill="none"/>
+    <circle cx="48" cy="72" r="5" fill="#6ee7f9"/>
+    <circle cx="298" cy="244" r="5" fill="#6ee7f9"/>
+    <circle cx="1150" cy="120" r="5" fill="#6ee7f9"/>
+  </g>
+
+  <g transform="translate(86 82)" filter="url(#glow)">
+    <path d="M92 0 172 30v64c0 54-32 91-80 112C44 185 12 148 12 94V30Z" fill="url(#shield)"/>
+    <path d="M92 18 154 41v52c0 42-23 72-62 92-39-20-62-50-62-92V41Z" fill="#0b1a2c" opacity="0.92"/>
+    <path d="m58 99 23 23 48-55" fill="none" stroke="#8bf7dc" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g fill="#f4f8ff" font-family="Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif">
+    <text x="320" y="142" font-size="72" font-weight="750" letter-spacing="-2">Secure AI</text>
+    <text x="322" y="190" font-size="24" fill="#a9bad0">The model can reason. Deterministic code holds the authority.</text>
+  </g>
+
+  <g transform="translate(322 230)" font-family="Inter, ui-sans-serif, system-ui, sans-serif">
+    <rect width="178" height="56" rx="14" fill="#122b40" stroke="#2b526b"/>
+    <text x="20" y="24" font-size="13" fill="#8fa9bd" letter-spacing="1">RESPAN SCORE</text>
+    <text x="20" y="45" font-size="22" font-weight="700" fill="#8bf7dc">A · 95/100</text>
+
+    <rect x="194" width="178" height="56" rx="14" fill="#122b40" stroke="#2b526b"/>
+    <text x="214" y="24" font-size="13" fill="#8fa9bd" letter-spacing="1">FINDINGS</text>
+    <text x="214" y="45" font-size="22" font-weight="700" fill="#8bf7dc">0 critical → low</text>
+
+    <rect x="388" width="178" height="56" rx="14" fill="#122b40" stroke="#2b526b"/>
+    <text x="408" y="24" font-size="13" fill="#8fa9bd" letter-spacing="1">STACK</text>
+    <text x="408" y="45" font-size="20" font-weight="700" fill="#dbeafe">ADK · Respan</text>
+  </g>
+</svg>
