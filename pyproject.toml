@@ -22,6 +22,10 @@ dependencies = [
 [project.scripts]
 secure-ai = "secure_ai.cli:main"
 
+[project.urls]
+Repository = "https://github.com/Shubeeksh-K/Secure-AI-Guardrails"
+Issues = "https://github.com/Shubeeksh-K/Secure-AI-Guardrails/issues"
+
 [build-system]
 requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"

@@ -8,6 +8,7 @@
   <img alt="Respan score 95" src="https://img.shields.io/badge/Respan_score-95%2F100-12B981" />
   <img alt="Tests: 17 passing" src="https://img.shields.io/badge/tests-17_passing-22C55E" />
   <img alt="Ruff: passing" src="https://img.shields.io/badge/Ruff-passing-D7FF64?logo=ruff&logoColor=261230" />
+  <a href="https://github.com/Shubeeksh-K/Secure-AI-Guardrails/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/Shubeeksh-K/Secure-AI-Guardrails/actions/workflows/ci.yml/badge.svg" /></a>
 </p>
 
 <p align="center">
@@ -30,7 +31,7 @@ The reviewed, aggregate-only evidence is available in the [sanitized assessment 
 - List and inspect only the authenticated customer's orders.
 - Check deterministic return eligibility.
 - Propose a return and require confirmation in a later turn before creating it.
-- Create ownership-scoped, idempotent support tickets.
+- Create validated support tickets scoped to the authenticated customer.
 
 The agent cannot choose another identity, query the database directly, trust user-supplied authorization, invent a successful tool result, or bypass the application policy engine.
 
@@ -42,7 +43,7 @@ Prerequisites: Python 3.12, [`uv`](https://docs.astral.sh/uv/), and a Respan API
 cp .env.example .env
 # Add RESPAN_API_KEY to .env
 
-uv sync
+uv sync --frozen
 uv run secure-ai
 ```
 
@@ -120,27 +121,39 @@ The 17 deterministic tests cover:
 - cross-customer isolation and safe non-enumerating failures
 - tool-call and mutation budgets
 - two-turn confirmation and confirmation expiry
-- return and ticket idempotency
+- return confirmation replay protection
 - input validation and fail-closed tool errors
 
-## Run the Respan assessment
+## Run Respan Red Team
 
 [`adapter.py`](adapter.py) implements Respan's chat target interface and creates a fresh isolated agent session for every attack.
 
-With CLI authentication:
+First, verify that the adapter returns a real response from the configured agent:
+
+```bash
+uv run python -c "import adapter; c = adapter.TARGET.open(); print(c.send('hello')); c.close()"
+```
+
+### Hosted engine
+
+This is Respan's documented default. The target and adapter stay on your machine while Respan runs the red-team engine remotely and exchanges user messages and assistant replies with the adapter.
 
 ```bash
 uv run respan-redteam auth login
 uv run respan-redteam scan adapter.py --output redteam-report.json
 ```
 
-Or route the local assessment through the configured Respan gateway:
+### Local engine through the Respan Gateway
+
+This runs the open-source red-team engine on your machine. The included wrapper loads `.env`, maps `RESPAN_API_KEY` and `RESPAN_BASE_URL` to the OpenAI-compatible evaluator interface, and writes the raw report locally:
 
 ```bash
-uv run python scripts/run_redteam_local.py
+uv run python scripts/run_redteam_local.py --output redteam-report.json
 ```
 
-Generated raw reports are git-ignored. Review and sanitize any assessment artifact before publishing it.
+In local mode, the target agent uses `RESPAN_MODEL`; the red-team attacker and judges use the CLI's evaluator defaults (`gpt-4.1` and `gpt-4.1-mini`) through the Respan Gateway. This consumes gateway credits and does not require `respan-redteam auth login`.
+
+In both modes, only assess systems you own or are explicitly authorized to test. Generated raw reports are git-ignored because they can contain prompts, responses, reconstructed instructions, and attack material. Review and sanitize any assessment artifact before publishing it.
 
 ## Built with
 
