@@ -45,6 +45,7 @@ _INPUT_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
         re.compile(r"<\/?(?:system|developer|tool)>|\[(?:system|developer|tool)\]", re.I),
     ),
     ("fake_tool_result", re.compile(r"\b(?:tool|function)\s+(?:result|output|response)\s*:", re.I)),
+    ("external_url", re.compile(r"\b(?:https?|ftp)://|\bwww\.", re.I)),
 )
 
 _BASE64_BLOCK = re.compile(r"(?:[A-Za-z0-9+/]{120,}={0,2})")
@@ -53,6 +54,7 @@ _SECRET_PATTERNS = (
     re.compile(r"\b(?:api[_-]?key|secret|password)\s*[:=]\s*[^\s,;]{8,}", re.I),
     re.compile(r"\bBearer\s+[A-Za-z0-9._~-]{16,}\b", re.I),
 )
+_EXTERNAL_SINK_PATTERN = re.compile(r"\b(?:https?|ftp)://|\bwww\.", re.I)
 _PROTECTED_ARGUMENTS = {"customer_id", "user_id", "session_id", "api_key", "model"}
 _PROTECTED_RESULT_KEYS = {"customer_id", "customer_note", "api_key", "secret", "password"}
 
@@ -77,6 +79,8 @@ def inspect_user_text(text: str, max_chars: int) -> GuardDecision:
 
 def output_is_safe(text: str, canary: str) -> bool:
     if canary and canary in text:
+        return False
+    if _EXTERNAL_SINK_PATTERN.search(text):
         return False
     return not any(pattern.search(text) for pattern in _SECRET_PATTERNS)
 

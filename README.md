@@ -6,7 +6,7 @@
   <img alt="Python 3.12" src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" />
   <img alt="Google ADK 2.x" src="https://img.shields.io/badge/Google_ADK-2.x-4285F4?logo=google&logoColor=white" />
   <img alt="Respan score 95" src="https://img.shields.io/badge/Respan_score-95%2F100-12B981" />
-  <img alt="Tests: 17 passing" src="https://img.shields.io/badge/tests-17_passing-22C55E" />
+  <img alt="Tests: 20 passing" src="https://img.shields.io/badge/tests-20_passing-22C55E" />
   <img alt="Ruff: passing" src="https://img.shields.io/badge/Ruff-passing-D7FF64?logo=ruff&logoColor=261230" />
   <a href="https://github.com/Shubeeksh-K/Secure-AI-Guardrails/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/Shubeeksh-K/Secure-AI-Guardrails/actions/workflows/ci.yml/badge.svg" /></a>
 </p>
@@ -99,12 +99,12 @@ flowchart LR
 | --- | --- |
 | System contract | Restricts the agent to narrow commerce-support capabilities |
 | Server-owned context | Keeps customer and session identity out of model-controlled arguments |
-| Input guardrail | Enforces size limits and blocks prompt extraction, role forgery, secret requests, and encoded payloads |
+| Input guardrail | Enforces size limits and blocks prompt extraction, role forgery, secret requests, encoded payloads, and external URL sinks |
 | Tool-call guardrail | Rejects protected arguments and oversized serialized calls |
 | Policy engine | Limits each turn to three tool calls and one mutation; owns confirmation state |
 | Tool validation | Applies schemas, ownership checks, trusted-data selection, and idempotent writes |
 | Tool-result guardrail | Recursively prevents protected fields from reaching the model |
-| Output guardrail | Detects the session canary and credential-shaped output, then fails closed |
+| Output guardrail | Detects the session canary, credential-shaped output, and URL-based exfiltration sinks, then fails closed |
 
 Read [the architecture notes](docs/ARCHITECTURE.md) for the trust boundaries, responsibility split, and consequential-action sequence.
 
@@ -115,9 +115,10 @@ uv run ruff check .
 uv run pytest -q
 ```
 
-The 17 deterministic tests cover:
+The 20 deterministic tests cover:
 
 - prompt-injection and secret-output filtering
+- URL and Markdown tracking-sink exfiltration
 - cross-customer isolation and safe non-enumerating failures
 - tool-call and mutation budgets
 - two-turn confirmation and confirmation expiry
@@ -134,15 +135,6 @@ First, verify that the adapter returns a real response from the configured agent
 uv run python -c "import adapter; c = adapter.TARGET.open(); print(c.send('hello')); c.close()"
 ```
 
-### Hosted engine
-
-This is Respan's documented default. The target and adapter stay on your machine while Respan runs the red-team engine remotely and exchanges user messages and assistant replies with the adapter.
-
-```bash
-uv run respan-redteam auth login
-uv run respan-redteam scan adapter.py --output redteam-report.json
-```
-
 ### Local engine through the Respan Gateway
 
 This runs the open-source red-team engine on your machine. The included wrapper loads `.env`, maps `RESPAN_API_KEY` and `RESPAN_BASE_URL` to the OpenAI-compatible evaluator interface, and writes the raw report locally:
@@ -152,6 +144,8 @@ uv run python scripts/run_redteam_local.py --output redteam-report.json
 ```
 
 In local mode, the target agent uses `RESPAN_MODEL`; the red-team attacker and judges use the CLI's evaluator defaults (`gpt-4.1` and `gpt-4.1-mini`) through the Respan Gateway. This consumes gateway credits and does not require `respan-redteam auth login`.
+
+Respan also offers a hosted campaign workflow, subject to the campaign allowance shown in the Respan platform. This repository documents the locally validated path so a fresh clone can reproduce the assessment without depending on hosted campaign availability.
 
 In both modes, only assess systems you own or are explicitly authorized to test. Generated raw reports are git-ignored because they can contain prompts, responses, reconstructed instructions, and attack material. Review and sanitize any assessment artifact before publishing it.
 

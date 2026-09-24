@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import unittest
 
 from adapter import Chat, Target
@@ -59,6 +60,16 @@ class AdapterTests(unittest.TestCase):
         chat.close()
         with self.assertRaises(RuntimeError):
             chat.send("hello")
+
+    def test_close_cancels_loop_owned_background_tasks(self) -> None:
+        chat = Chat(settings=_settings(), session_factory=FakeSession)
+
+        async def wait_forever() -> None:
+            await asyncio.Event().wait()
+
+        task = chat._loop.create_task(wait_forever())
+        chat.close()
+        self.assertTrue(task.cancelled())
 
 
 if __name__ == "__main__":

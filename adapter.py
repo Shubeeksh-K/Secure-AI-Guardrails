@@ -69,9 +69,23 @@ class Chat:
     def close(self) -> None:
         if self._closed:
             return
-        self._session.close()
-        self._loop.close()
-        self._closed = True
+        try:
+            self._session.close()
+        finally:
+            # LiteLLM may leave loop-owned logging workers alive after a model call.
+            # Cancel and drain them before closing this attack's isolated loop so
+            # one campaign cannot leak tasks or warnings into the next attack.
+            pending = [task for task in asyncio.all_tasks(self._loop) if not task.done()]
+            for task in pending:
+                task.cancel()
+            if pending:
+                self._loop.run_until_complete(
+                    asyncio.gather(*pending, return_exceptions=True)
+                )
+            self._loop.run_until_complete(self._loop.shutdown_asyncgens())
+            self._loop.run_until_complete(self._loop.shutdown_default_executor())
+            self._loop.close()
+            self._closed = True
 
 
 class Target:
