@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.12, <3.14"
 
 [[package]]
@@ -2768,7 +2768,7 @@ wheels = [
 
 [[package]]
 name = "respan-redteam"
-version = "0.1.7"
+version = "0.1.10"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "keyring" },
@@ -2778,9 +2778,9 @@ dependencies = [
     { name = "tomli-w" },
     { name = "websockets" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e4/65/a8f7f0b065a24bdf1ef6a562128d5d1f9f4a0d9d6af0d78fcdaaf9a14b8d/respan_redteam-0.1.7.tar.gz", hash = "sha256:bfee1cc4e2916b37b118b6dde904ef6190d8e1242752a4001fe0c30abf85ab3b", size = 132891, upload-time = "2026-07-18T19:49:37.463Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/97/62/2a6a9cb36758dabad6070ad52a5552a70355338dbdd7eb313729fb49ec2d/respan_redteam-0.1.10.tar.gz", hash = "sha256:4cd5148d34e3e27a61bbf3e5d15d59e8365b8617bc115f1e6c7c140819218b9e", size = 194292, upload-time = "2026-09-21T19:58:51.812Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f0/46/d246906d3b9d34c2add6deae03b3ec4b3015b117829e8765d00ca1785108/respan_redteam-0.1.7-py3-none-any.whl", hash = "sha256:860afc3ed188e22bb1ef5974dc11337285aee173f913beaab41ca9ebf01bf4fc", size = 94325, upload-time = "2026-07-18T19:49:35.963Z" },
+    { url = "https://files.pythonhosted.org/packages/68/a4/b1fab66b261f81d559b6cd868b66e2805addabb9e6a005e61c15ba438fca/respan_redteam-0.1.10-py3-none-any.whl", hash = "sha256:ff2bf8342cc74876e42f97c3f99e927ed3a7c4f987cfc892af4ac9a622fed291", size = 104475, upload-time = "2026-09-21T19:58:50.174Z" },
 ]
 
 [[package]]
