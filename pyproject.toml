@@ -3,6 +3,8 @@ name = "secure-ai"
 version = "0.1.0"
 description = "A defense-in-depth Google ADK commerce agent evaluated with Respan AI"
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.12,<3.14"
 keywords = ["ai-security", "google-adk", "llm", "prompt-injection", "respan"]
 classifiers = [
@@ -33,15 +35,21 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 include = ["secure_ai*"]
 
+[tool.setuptools.package-data]
+secure_ai = ["py.typed"]
+
 [dependency-groups]
 dev = [
+  "pre-commit>=4.7.0",
   "pytest>=8.3.0,<9.0.0",
-  "respan-redteam>=0.1.7",
+  "pytest-cov>=6.0.0,<8.0.0",
+  "respan-redteam>=0.1.7,<1.0.0",
   "ruff>=0.12.0,<1.0.0",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = "--cov=secure_ai --cov=adapter --cov-report=term-missing --cov-fail-under=88"
 pythonpath = ["."]
 
 [tool.ruff]
@@ -49,4 +57,10 @@ line-length = 100
 target-version = "py312"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B", "SIM"]
+select = ["E", "F", "I", "UP", "B", "SIM", "D1"]
+# D105/D107: magic methods and __init__ are documented by their class.
+ignore = ["D105", "D107"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D"]
+"scripts/*" = ["D103"]
