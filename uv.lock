@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.12, <3.14"
 
 [[package]]
@@ -2624,7 +2624,7 @@ wheels = [
 
 [[package]]
 name = "respan-ai"
-version = "4.2.3"
+version = "4.2.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "respan-instrumentation-anthropic" },
@@ -2636,9 +2636,9 @@ dependencies = [
     { name = "respan-instrumentation-vertexai" },
     { name = "respan-tracing" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/49/b7/5c362ec0c75743770dbaed7cb8d0e41d12d253d753ae5a5468f0b4bd8a5b/respan_ai-4.2.3.tar.gz", hash = "sha256:d746235183421cfde8634a47f9741c752fd6a451fc8c2b5e006c6d996f3068da", size = 15414, upload-time = "2026-08-12T01:04:03.936Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ef/68/fcc2ac9e00f233b3a9e097f20c9200afccc2f01115e65d5c9ab2359bfba3/respan_ai-4.2.4.tar.gz", hash = "sha256:a66420c164e97c98b870a766b002c3111ccd073302e21f578f06f19fed867aeb", size = 15419, upload-time = "2026-10-13T08:03:12.812Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7f/b5/d38874921149403aa940d4c87aaf17f6c64ae315942d1cfde9ca8388bddc/respan_ai-4.2.3-py3-none-any.whl", hash = "sha256:80d251944701be541b6d211556a381e911487c1b4b1e1388921783d0eee049ed", size = 14830, upload-time = "2026-08-12T01:04:02.788Z" },
+    { url = "https://files.pythonhosted.org/packages/72/1d/6416b914454dde74d04ef2eff50db30761e6ffcfeb422b77be7c201dbcc1/respan_ai-4.2.4-py3-none-any.whl", hash = "sha256:7a2cc80d86381bf3f63de6ea74c95b9da9a17396d23838caaa0c008fd7c2089a", size = 14837, upload-time = "2026-10-13T08:03:11.611Z" },
 ]
 
 [[package]]
