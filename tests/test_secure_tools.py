@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sqlite3
 import unittest
 
 from secure_ai.db import SQLiteStore
@@ -79,6 +80,139 @@ class SecureToolsTests(unittest.TestCase):
         self.context.begin_turn()
         replay = self.tools.confirm_return(self.context, "confirm")
         self.assertEqual(replay["code"], "NO_PENDING_RETURN")
+
+    def test_pending_return_expires_after_too_many_turns(self) -> None:
+        self.tools.propose_return(self.context, "ord_alice_1001", "Defective item")
+        for _ in range(3):
+            self.context.begin_turn()
+        expired = self.tools.confirm_return(self.context, "confirm")
+        self.assertEqual(expired["code"], "CONFIRMATION_EXPIRED")
+
+        self.context.begin_turn()
+        again = self.tools.confirm_return(self.context, "confirm")
+        self.assertEqual(again["code"], "NO_PENDING_RETURN")
+
+    def test_pending_return_confirms_within_window(self) -> None:
+        self.tools.propose_return(self.context, "ord_alice_1001", "Defective item")
+        self.context.begin_turn()
+        self.context.begin_turn()
+        confirmed = self.tools.confirm_return(self.context, "confirm")
+        self.assertEqual(confirmed["code"], "RETURN_CREATED")
+
+    def test_duplicate_return_for_same_order_is_rejected(self) -> None:
+        self.tools.propose_return(self.context, "ord_alice_1001", "Defective item")
+        self.context.begin_turn()
+        self.tools.confirm_return(self.context, "confirm")
+        self.context.begin_turn()
+        again = self.tools.propose_return(self.context, "ord_alice_1001", "Defective item")
+        self.assertEqual(again["code"], "RETURN_NOT_ELIGIBLE")
+
+    def test_malformed_ids_are_rejected_without_database_lookup(self) -> None:
+        for bad in ("ORD_ALICE_1001", "ord_alice_1001'; DROP TABLE orders;--", "x"):
+            context = SecurityContext(customer_id="customer_alice", session_id="s")
+            context.begin_turn()
+            self.assertEqual(
+                self.tools.check_return_eligibility(context, bad)["code"], "ORDER_NOT_FOUND"
+            )
+            self.assertEqual(
+                self.tools.propose_return(context, bad, "Defective item")["code"],
+                "ORDER_NOT_FOUND",
+            )
+
+    def test_create_return_is_idempotent_for_a_replayed_key(self) -> None:
+        kwargs = {
+            "return_id": "ret_one",
+            "customer_id": "customer_alice",
+            "order_id": "ord_alice_1001",
+            "reason": "Defective item",
+            "idempotency_key": "act_replay",
+        }
+        first = self.store.create_return(**kwargs)
+        second = self.store.create_return(**{**kwargs, "return_id": "ret_two"})
+        self.assertEqual(first, second)
+
+    def test_database_rejects_second_active_return_for_an_order(self) -> None:
+        base = {"customer_id": "customer_alice", "order_id": "ord_alice_1001", "reason": "x y z"}
+        self.store.create_return(return_id="ret_a", idempotency_key="k1", **base)
+        with self.assertRaises(sqlite3.IntegrityError):
+            self.store.create_return(return_id="ret_b", idempotency_key="k2", **base)
+
+    def test_policy_search_validates_and_finds_trusted_policies(self) -> None:
+        found = self.tools.search_policies(self.context, "return")
+        self.assertEqual(found["code"], "POLICIES_FOUND")
+        self.assertEqual(found["data"]["policies"][0]["id"], "policy_returns")
+        self.assertEqual(self.tools.search_policies(self.context, "x")["code"], "INVALID_QUERY")
+
+    def test_policy_search_treats_wildcards_literally(self) -> None:
+        result = self.tools.search_policies(self.context, "%%")
+        self.assertEqual(result["data"]["policies"], [])
+
+    def test_order_status_filter(self) -> None:
+        shipped = self.tools.list_my_orders(self.context, "shipped")
+        self.assertEqual([o["order_id"] for o in shipped["data"]["orders"]], ["ord_alice_1003"])
+        self.assertEqual(self.tools.list_my_orders(self.context, "bogus")["code"], "INVALID_STATUS")
+
+    def test_ineligible_orders_cannot_be_proposed(self) -> None:
+        for order_id in ("ord_alice_1002", "ord_alice_1003"):
+            context = SecurityContext(customer_id="customer_alice", session_id="s")
+            context.begin_turn()
+            result = self.tools.propose_return(context, order_id, "Changed my mind")
+            self.assertEqual(result["code"], "RETURN_NOT_ELIGIBLE")
+
+    def test_return_reason_is_validated(self) -> None:
+        result = self.tools.propose_return(self.context, "ord_alice_1001", "x")
+        self.assertEqual(result["code"], "INVALID_REASON")
+
+    def test_cancel_return_is_ownership_scoped(self) -> None:
+        self.store.create_return(
+            return_id="ret_alice",
+            customer_id="customer_alice",
+            order_id="ord_alice_1001",
+            reason="Defective",
+            idempotency_key="k",
+        )
+        bob = SecurityContext(customer_id="customer_bob", session_id="b")
+        bob.begin_turn()
+        self.assertEqual(self.tools.cancel_return(bob, "ret_alice")["code"], "RETURN_NOT_FOUND")
+        self.assertEqual(
+            self.tools.cancel_return(self.context, "BAD ID")["code"], "RETURN_NOT_FOUND"
+        )
+        self.context.begin_turn()
+        self.assertEqual(
+            self.tools.cancel_return(self.context, "ret_alice")["code"], "RETURN_CANCELLED"
+        )
+
+    def test_cancelled_return_frees_the_order_for_a_new_return(self) -> None:
+        kwargs = {"customer_id": "customer_alice", "order_id": "ord_alice_1001", "reason": "x y z"}
+        self.store.create_return(return_id="ret_a", idempotency_key="k1", **kwargs)
+        self.assertTrue(self.store.cancel_return("customer_alice", "ret_a"))
+        self.store.create_return(return_id="ret_b", idempotency_key="k2", **kwargs)
+
+    def test_support_ticket_creation_and_validation(self) -> None:
+        ok = self.tools.create_support_ticket(
+            self.context, "delivery", "Where is my keyboard?", "ord_alice_1003"
+        )
+        self.assertEqual(ok["code"], "TICKET_CREATED")
+        for category, description in (("bogus", "Valid description"), ("other", "no")):
+            context = SecurityContext(customer_id="customer_alice", session_id="s")
+            context.begin_turn()
+            result = self.tools.create_support_ticket(context, category, description)
+            self.assertFalse(result["ok"])
+
+    def test_control_characters_are_rejected_in_free_text(self) -> None:
+        result = self.tools.create_support_ticket(self.context, "other", "bad\x00 description")
+        self.assertEqual(result["code"], "INVALID_DESCRIPTION")
+
+    def test_missing_security_context_is_denied(self) -> None:
+        context = SecurityContext(customer_id="", session_id="s")
+        result = self.tools.list_my_orders(context)
+        self.assertEqual(result["code"], "MISSING_SECURITY_CONTEXT")
+
+    def test_budgets_reset_on_new_turn(self) -> None:
+        for _ in range(3):
+            self.tools.list_my_orders(self.context)
+        self.context.begin_turn()
+        self.assertTrue(self.tools.list_my_orders(self.context)["ok"])
 
     def test_tool_budget_is_enforced(self) -> None:
         self.tools.list_my_orders(self.context)

@@ -22,6 +22,11 @@ class FakeSession:
         self.closed = True
 
 
+class FailingSession(FakeSession):
+    async def start(self) -> None:
+        raise RuntimeError("boom")
+
+
 def _settings() -> Settings:
     return Settings(
         respan_api_key="test-key",
@@ -53,7 +58,30 @@ class AdapterTests(unittest.TestCase):
     def test_target_opens_distinct_chats(self) -> None:
         target = Target()
         self.assertEqual(target.label, "secure-ai")
-        self.assertIsNot(target.open, None)
+        first = Chat(settings=_settings(), session_factory=FakeSession)
+        second = Chat(settings=_settings(), session_factory=FakeSession)
+        self.addCleanup(first.close)
+        self.addCleanup(second.close)
+        first.send("one")
+        self.assertEqual(second.transcript(), [])
+        self.assertIsNot(first._session, second._session)
+
+    def test_failed_start_closes_the_session_and_loop(self) -> None:
+        sessions: list[FailingSession] = []
+
+        def factory(settings: Settings) -> FailingSession:
+            sessions.append(FailingSession(settings))
+            return sessions[0]
+
+        with self.assertRaises(RuntimeError):
+            Chat(settings=_settings(), session_factory=factory)
+        self.assertTrue(sessions[0].closed)
+
+    def test_chat_works_as_a_context_manager(self) -> None:
+        with Chat(settings=_settings(), session_factory=FakeSession) as chat:
+            self.assertEqual(chat.send("hi"), "safe:hi")
+        with self.assertRaises(RuntimeError):
+            chat.send("again")
 
     def test_closed_chat_rejects_additional_messages(self) -> None:
         chat = Chat(settings=_settings(), session_factory=FakeSession)
