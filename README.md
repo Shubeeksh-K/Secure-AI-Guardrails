@@ -4,11 +4,9 @@
 
 <p align="center">
   <img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-blue" />
-  <img alt="Python 3.12" src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" />
+  <img alt="Python 3.12 | 3.13" src="https://img.shields.io/badge/Python-3.12_|_3.13-3776AB?logo=python&logoColor=white" />
   <img alt="Google ADK 2.x" src="https://img.shields.io/badge/Google_ADK-2.x-4285F4?logo=google&logoColor=white" />
-  <img alt="Respan score 95" src="https://img.shields.io/badge/Respan_score-95%2F100-12B981" />
-  <img alt="Tests: 20 passing" src="https://img.shields.io/badge/tests-70_passing-22C55E" />
-  <img alt="Ruff: passing" src="https://img.shields.io/badge/Ruff-passing-D7FF64?logo=ruff&logoColor=261230" />
+  <a href="docs/redteam-report.json"><img alt="Respan red-team score 95" src="https://img.shields.io/badge/Respan_score-95%2F100-12B981" /></a>
   <a href="https://github.com/Shubeeksh-K/Secure-AI-Guardrails/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/Shubeeksh-K/Secure-AI-Guardrails/actions/workflows/ci.yml/badge.svg" /></a>
 </p>
 
@@ -17,6 +15,9 @@
 </p>
 
 Secure AI treats the LLM as an **untrusted planner**. The model can decide which permitted capability may help, but deterministic Python code owns identity, authorization, policy state, database access, and every side effect.
+
+> [!IMPORTANT]
+> Secure AI is a prototype that uses fictional data. It has no user authentication, persistent storage, or service layer, so it is not production-ready. See [SECURITY.md](SECURITY.md) and [Known limits](docs/ARCHITECTURE.md#known-limits).
 
 ## Red-team result
 
@@ -27,7 +28,7 @@ Secure AI treats the LLM as an **untrusted planner**. The model can decide which
 The reviewed, aggregate-only evidence is available in the [sanitized assessment report](docs/redteam-report.json). The raw report remains local because security assessments can contain internal reconstructions and attack material.
 
 > [!NOTE]
-> Re-run on 2026-11-01 after the hardening changes (local engine, 56 probes): same result, grade A, 0 findings. The tool reports a resistance rate of 0.839 (47/56) because 9 probes are not attributed to a category row, and LLM04, LLM05 and LLM08 cannot be assessed through the gateway. Treat the score as evidence for the tested attack set only.
+> Last run 2026-11-01 (local engine, 56 probes), after the hardening changes. The tool also reports a resistance rate of 0.839 (47/56): 9 probes are not attributed to a category, and LLM04, LLM05 and LLM08 cannot be assessed through the gateway. The score is evidence for the tested attack set only.
 
 ## What the agent can do
 
@@ -41,7 +42,7 @@ The agent cannot choose another identity, query the database directly, trust use
 
 ## Quick start
 
-Prerequisites: Python 3.12, [`uv`](https://docs.astral.sh/uv/), and a Respan API key.
+Prerequisites: Python 3.12 or 3.13, [`uv`](https://docs.astral.sh/uv/), and a Respan API key.
 
 ```bash
 cp .env.example .env
@@ -52,6 +53,17 @@ uv run secure-ai
 ```
 
 The sandbox starts with fictional records for `customer_alice`. Change `SECURE_AI_CUSTOMER_ID` in `.env` to switch between seeded demo identities. Every agent session receives a fresh in-memory SQLite database, so no real customer data is used or persisted.
+
+### Configuration
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `RESPAN_API_KEY` | *(required)* | Respan gateway key for model calls and tracing |
+| `RESPAN_BASE_URL` | `https://api.respan.ai/api` | Gateway endpoint |
+| `RESPAN_MODEL` | `gpt-5-mini` | Model the agent uses |
+| `SECURE_AI_CUSTOMER_ID` | `customer_alice` | Seeded demo identity (`customer_alice` or `customer_bob`) |
+| `SECURE_AI_MAX_INPUT_CHARS` | `4000` | Input size limit (100-20000) |
+| `SECURE_AI_ENABLE_TRACING` | `true` | Send traces to Respan |
 
 ## See it in action
 
@@ -118,18 +130,13 @@ Read [the architecture notes](docs/ARCHITECTURE.md) for the trust boundaries, re
 make check   # ruff lint, format check, and tests with an 88% coverage gate
 ```
 
-The 70 deterministic tests cover:
+The deterministic tests need no network or API key and cover:
 
-- prompt-injection and secret-output filtering, including Unicode obfuscation
-- guardrail callbacks (model, tool-call, tool-result, and tool-error)
-- end-to-end ADK runs against a scripted model (no network), including the two-turn return flow and a simulated compromised model (forged identity, budget abuse, cross-customer returns, unknown tools)
-- an attack/benign corpus for the input and output filters
-- URL and Markdown tracking-sink exfiltration
-- cross-customer isolation and safe non-enumerating failures
-- tool-call and mutation budgets
-- two-turn confirmation and confirmation expiry (a proposal lapses after two further turns)
-- return confirmation replay protection
-- input validation and fail-closed tool errors
+- input and output filters, with attack and benign corpora and Unicode obfuscation
+- the guardrail callbacks (model, tool-call, tool-result, tool-error)
+- cross-customer isolation and non-enumerating failures
+- tool-call and mutation budgets, two-turn confirmation, expiry, and replay protection
+- end-to-end ADK runs against a scripted model, including a simulated compromised model (forged identity, budget abuse, cross-customer returns, unknown tools)
 
 ## Run Respan Red Team
 
@@ -170,11 +177,11 @@ tests/                        Deterministic security and tool-behavior tests
 adapter.py                    Respan Red Team target adapter
 scripts/run_redteam_local.py  Reproducible local assessment wrapper
 docs/                         Architecture, visual assets, and assessment summary
-.github/workflows/ci.yml      Lint and test checks for pushes and pull requests
+.github/workflows/ci.yml      Lint, format, and test checks (Python 3.12 and 3.13)
+Makefile                      `make check` runs lint, format check, and tests
 ```
 
-> [!IMPORTANT]
-> Secure AI is a hackathon prototype using fictional data. Its assessment demonstrates performance against the tested attacks; it is not proof that the system is unbreakable or production-ready.
+Contributing: see [CONTRIBUTING.md](CONTRIBUTING.md) and the [changelog](CHANGELOG.md).
 
 See [SECURITY.md](SECURITY.md) for the threat model, current scope, and responsible disclosure guidance.
 
