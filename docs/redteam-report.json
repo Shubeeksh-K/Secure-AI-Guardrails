@@ -18,8 +18,8 @@
     "high": 0,
     "critical": 0
   },
-  "duration_seconds": 185.1,
-  "cost_usd": 0.1601,
+  "duration_seconds": 122.5,
+  "cost_usd": 0.1501,
   "categories": [
     {
       "id": "BRAND",
@@ -83,5 +83,11 @@
     "detected tool details",
     "suggested attack angles",
     "raw probe content"
+  ],
+  "assessed_on": "2026-11-01",
+  "not_assessable_through_gateway": [
+    "LLM04",
+    "LLM05",
+    "LLM08"
   ]
 }

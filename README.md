@@ -3,10 +3,11 @@
 </p>
 
 <p align="center">
+  <img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-blue" />
   <img alt="Python 3.12" src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" />
   <img alt="Google ADK 2.x" src="https://img.shields.io/badge/Google_ADK-2.x-4285F4?logo=google&logoColor=white" />
   <img alt="Respan score 95" src="https://img.shields.io/badge/Respan_score-95%2F100-12B981" />
-  <img alt="Tests: 20 passing" src="https://img.shields.io/badge/tests-20_passing-22C55E" />
+  <img alt="Tests: 20 passing" src="https://img.shields.io/badge/tests-70_passing-22C55E" />
   <img alt="Ruff: passing" src="https://img.shields.io/badge/Ruff-passing-D7FF64?logo=ruff&logoColor=261230" />
   <a href="https://github.com/Shubeeksh-K/Secure-AI-Guardrails/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/Shubeeksh-K/Secure-AI-Guardrails/actions/workflows/ci.yml/badge.svg" /></a>
 </p>
@@ -24,6 +25,9 @@ Secure AI treats the LLM as an **untrusted planner**. The model can decide which
 | **A** | **95/100** | **56/56** | **0** | **0** |
 
 The reviewed, aggregate-only evidence is available in the [sanitized assessment report](docs/redteam-report.json). The raw report remains local because security assessments can contain internal reconstructions and attack material.
+
+> [!NOTE]
+> Re-run on 2026-11-01 after the hardening changes (local engine, 56 probes): same result, grade A, 0 findings. The tool reports a resistance rate of 0.839 (47/56) because 9 probes are not attributed to a category row, and LLM04, LLM05 and LLM08 cannot be assessed through the gateway. Treat the score as evidence for the tested attack set only.
 
 ## What the agent can do
 
@@ -99,29 +103,31 @@ flowchart LR
 | --- | --- |
 | System contract | Restricts the agent to narrow commerce-support capabilities |
 | Server-owned context | Keeps customer and session identity out of model-controlled arguments |
-| Input guardrail | Enforces size limits and blocks prompt extraction, role forgery, secret requests, encoded payloads, and external URL sinks |
+| Input guardrail | Normalizes Unicode, enforces size limits, and blocks prompt extraction, role forgery, secret requests, encoded payloads, and external URL sinks |
 | Tool-call guardrail | Rejects protected arguments and oversized serialized calls |
-| Policy engine | Limits each turn to three tool calls and one mutation; owns confirmation state |
+| Policy engine | Limits each turn to three tool calls and one mutation; owns confirmation state and expiry |
 | Tool validation | Applies schemas, ownership checks, trusted-data selection, and idempotent writes |
 | Tool-result guardrail | Recursively prevents protected fields from reaching the model |
-| Output guardrail | Detects the session canary, credential-shaped output, and URL-based exfiltration sinks, then fails closed |
+| Output guardrail | Detects the session canary (even spaced out), system-prompt fragments, credential-shaped output, other-tenant identifiers, and URL/markup exfiltration sinks (including bare domains and protocol-relative links), then fails closed |
 
 Read [the architecture notes](docs/ARCHITECTURE.md) for the trust boundaries, responsibility split, and consequential-action sequence.
 
 ## Test the security boundary
 
 ```bash
-uv run ruff check .
-uv run pytest -q
+make check   # ruff lint, format check, and tests with an 88% coverage gate
 ```
 
-The 20 deterministic tests cover:
+The 70 deterministic tests cover:
 
-- prompt-injection and secret-output filtering
+- prompt-injection and secret-output filtering, including Unicode obfuscation
+- guardrail callbacks (model, tool-call, tool-result, and tool-error)
+- end-to-end ADK runs against a scripted model (no network), including the two-turn return flow and a simulated compromised model (forged identity, budget abuse, cross-customer returns, unknown tools)
+- an attack/benign corpus for the input and output filters
 - URL and Markdown tracking-sink exfiltration
 - cross-customer isolation and safe non-enumerating failures
 - tool-call and mutation budgets
-- two-turn confirmation and confirmation expiry
+- two-turn confirmation and confirmation expiry (a proposal lapses after two further turns)
 - return confirmation replay protection
 - input validation and fail-closed tool errors
 
@@ -154,12 +160,12 @@ In both modes, only assess systems you own or are explicitly authorized to test.
 - [Google Agent Development Kit](https://github.com/google/adk-python) for orchestration, function tools, isolated sessions, and lifecycle callbacks.
 - [Respan AI](https://www.respan.ai/) for model routing, ADK tracing, and adversarial assessment.
 - SQLite for a dependency-free, transactional, per-session sandbox.
-- Pydantic, pytest, Ruff, and uv for validation, testing, linting, and reproducible environments.
+- pytest, Ruff, and uv for testing, linting, and reproducible environments.
 
 ## Repository map
 
 ```text
-secure_ai/                    Agent, context, database, tools, and guardrails
+secure_ai/                    Agent, context, database, tools, guardrails, and detection patterns
 tests/                        Deterministic security and tool-behavior tests
 adapter.py                    Respan Red Team target adapter
 scripts/run_redteam_local.py  Reproducible local assessment wrapper
@@ -171,3 +177,7 @@ docs/                         Architecture, visual assets, and assessment summar
 > Secure AI is a hackathon prototype using fictional data. Its assessment demonstrates performance against the tested attacks; it is not proof that the system is unbreakable or production-ready.
 
 See [SECURITY.md](SECURITY.md) for the threat model, current scope, and responsible disclosure guidance.
+
+## License
+
+Released under the [MIT License](LICENSE).

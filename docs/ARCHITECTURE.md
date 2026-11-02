@@ -35,7 +35,7 @@ flowchart TB
     D --> T --> G5 --> A --> G6 --> U
 ```
 
-The model never receives authority merely because it produced a valid-looking function call. A server-created `SecurityContext` supplies identity, limits each turn to three tool calls and one mutation, and stores pending confirmation state. Tool methods independently validate schemas, ownership, allowed state transitions, and idempotency before touching the database.
+The model never receives authority merely because it produced a valid-looking function call. A server-created `SecurityContext` supplies identity, limits each turn to three tool calls and one mutation, and stores pending confirmation state, which expires two turns after the proposal. Tool methods independently validate schemas, ownership, allowed state transitions, and idempotency before touching the database.
 
 ## Consequential-action workflow
 
@@ -50,11 +50,11 @@ sequenceDiagram
     Agent->>Policy: propose_return(order_id, reason)
     Policy->>DB: verify ownership and eligibility
     DB-->>Policy: safe order facts
-    Policy-->>Agent: proposal + expiring confirmation token
+    Policy-->>Agent: proposal pending confirmation (expires after 2 turns)
     Agent-->>User: Ask for explicit confirmation
     User->>Agent: "Confirm"
     Agent->>Policy: confirm_return()
-    Policy->>Policy: verify later turn, exact intent, token, and mutation budget
+    Policy->>Policy: verify later turn, expiry, exact intent, single-use action id, and mutation budget
     Policy->>DB: idempotent return creation
     DB-->>Agent: safe result
     Agent-->>User: Confirm completed action
