@@ -28,6 +28,7 @@ async def _chat() -> None:
 
 
 def main() -> None:
+    """Console-script entry point for `secure-ai`."""
     asyncio.run(_chat())
 
 

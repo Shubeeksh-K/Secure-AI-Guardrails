@@ -43,6 +43,9 @@ CREATE TABLE IF NOT EXISTS return_requests (
     created_at TEXT NOT NULL
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS one_active_return_per_order
+    ON return_requests(order_id) WHERE status = 'created';
+
 CREATE TABLE IF NOT EXISTS support_tickets (
     id TEXT PRIMARY KEY,
     customer_id TEXT NOT NULL REFERENCES customers(id),
@@ -63,9 +66,11 @@ class SQLiteStore:
         self.connection.executescript(SCHEMA)
 
     def close(self) -> None:
+        """Close the connection; an in-memory database is discarded with it."""
         self.connection.close()
 
     def seed_demo_data(self) -> None:
+        """Insert fictional customers, orders, and policies. Safe to call more than once."""
         now = datetime.now(UTC)
         rows = [
             (
@@ -164,6 +169,7 @@ class SQLiteStore:
         }
 
     def list_orders(self, customer_id: str, status: str | None = None) -> list[dict[str, Any]]:
+        """Return the customer's orders in model-safe form, optionally filtered by status."""
         if status is None:
             rows = self.connection.execute(
                 "SELECT * FROM orders WHERE customer_id = ? ORDER BY id", (customer_id,)
@@ -176,12 +182,14 @@ class SQLiteStore:
         return [self._public_order(row) for row in rows]
 
     def get_order(self, customer_id: str, order_id: str) -> dict[str, Any] | None:
+        """Return one order only if it belongs to `customer_id`; otherwise None."""
         row = self.connection.execute(
             "SELECT * FROM orders WHERE customer_id = ? AND id = ?", (customer_id, order_id)
         ).fetchone()
         return self._public_order(row) if row else None
 
     def search_policies(self, query: str, limit: int = 3) -> list[dict[str, str]]:
+        """Keyword-search trusted policies; `%` and `_` in the query match literally."""
         escaped = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         pattern = f"%{escaped}%"
         rows = self.connection.execute(
@@ -195,6 +203,7 @@ class SQLiteStore:
         return [dict(row) for row in rows]
 
     def active_return_for_order(self, customer_id: str, order_id: str) -> dict[str, Any] | None:
+        """Return the order's non-cancelled return request, if any."""
         row = self.connection.execute(
             """
             SELECT id, order_id, reason, status, created_at FROM return_requests
@@ -213,6 +222,25 @@ class SQLiteStore:
         reason: str,
         idempotency_key: str,
     ) -> dict[str, Any]:
+        """Insert a return, or return the existing one if `idempotency_key` was already used.
+
+        A unique index additionally forbids two active returns for the same order, so a
+        race between two confirmations raises `sqlite3.IntegrityError` instead of duplicating.
+        """
+        existing = self.connection.execute(
+            """
+            SELECT id, order_id, status, created_at FROM return_requests
+            WHERE idempotency_key = ? AND customer_id = ?
+            """,
+            (idempotency_key, customer_id),
+        ).fetchone()
+        if existing:
+            return {
+                "return_id": existing["id"],
+                "order_id": existing["order_id"],
+                "status": existing["status"],
+                "created_at": existing["created_at"],
+            }
         created_at = datetime.now(UTC).isoformat()
         with self.connection:
             self.connection.execute(
@@ -231,6 +259,7 @@ class SQLiteStore:
         }
 
     def cancel_return(self, customer_id: str, return_id: str) -> bool:
+        """Cancel an active return owned by the customer; True only if a row changed."""
         with self.connection:
             cursor = self.connection.execute(
                 """
@@ -250,6 +279,7 @@ class SQLiteStore:
         category: str,
         description: str,
     ) -> dict[str, Any]:
+        """Insert a support ticket. Callers must already have validated ownership of `order_id`."""
         created_at = datetime.now(UTC).isoformat()
         with self.connection:
             self.connection.execute(

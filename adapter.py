@@ -19,11 +19,19 @@ SAFE_ERROR = "I couldn't complete that request safely. Please try a supported op
 
 
 class SessionLike(Protocol):
-    async def start(self) -> None: ...
+    """The session surface `Chat` needs; lets tests substitute a fake for the real agent."""
 
-    async def send(self, user_message: str) -> str: ...
+    async def start(self) -> None:
+        """Prepare the session for the first message."""
+        ...
 
-    def close(self) -> None: ...
+    async def send(self, user_message: str) -> str:
+        """Run one user turn and return the reply."""
+        ...
+
+    def close(self) -> None:
+        """Release resources."""
+        ...
 
 
 class Chat:
@@ -41,7 +49,17 @@ class Chat:
         self._turns: list[dict[str, str]] = []
         self._loop = asyncio.new_event_loop()
         self._closed = False
-        self._loop.run_until_complete(self._session.start())
+        try:
+            self._loop.run_until_complete(self._session.start())
+        except BaseException:
+            self.close()
+            raise
+
+    def __enter__(self) -> Chat:
+        return self
+
+    def __exit__(self, *_exc: object) -> None:
+        self.close()
 
     def send(self, user_message: str) -> str:
         """Send exactly one user message and return one assistant reply string."""
@@ -67,6 +85,7 @@ class Chat:
         return [dict(turn) for turn in self._turns]
 
     def close(self) -> None:
+        """Close the session and drain the private event loop; safe to call repeatedly."""
         if self._closed:
             return
         try:
@@ -79,9 +98,7 @@ class Chat:
             for task in pending:
                 task.cancel()
             if pending:
-                self._loop.run_until_complete(
-                    asyncio.gather(*pending, return_exceptions=True)
-                )
+                self._loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
             self._loop.run_until_complete(self._loop.shutdown_asyncgens())
             self._loop.run_until_complete(self._loop.shutdown_default_executor())
             self._loop.close()
@@ -89,6 +106,8 @@ class Chat:
 
 
 class Target:
+    """Entry point the Respan engine imports as `adapter.TARGET`."""
+
     label = "secure-ai"
 
     def open(self) -> Chat:
